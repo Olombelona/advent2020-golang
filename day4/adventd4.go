@@ -71,7 +71,7 @@ func isValidPassport(passport string) bool {
 	for _, field := range strings.Split(passport, " ") {
 		pair := strings.Split(field, ":")
 		if (len(pair) == 2) {
-			m[pair[0]] = pair[1]
+			m[pair[0]] = strings.Trim(pair[1], " ")
 		}
 	}
 	/*
@@ -123,16 +123,18 @@ func main() {
 	var passport = ""
 	for _,line := range lines {
 		if len(line) == 0 {
-			if isValidPassport(passport) {
-				countValid++
-				fmt.Println(">>", passport)
+			if passport != "" {
+				if isValidPassport(passport) {
+					countValid++
+					fmt.Println(">>", passport)
+				}
+				passport = ""
 			}
-			passport = ""
 		} else {
 			passport += line + " "
 		}
 	}
-	if passport!= "" && isValidPassport(passport) {
+	if passport != "" && isValidPassport(passport) {
 		countValid++
 		fmt.Println("??", passport)
 	}
