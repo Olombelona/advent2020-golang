@@ -38,12 +38,29 @@ func main() {
     check(err)
     highestSeatNumber := 0
     lines := strings.Split(string(dat), "\r\n")
+
+    var seats map[int]bool = make(map[int]bool)
     for _, line := range lines {
         row :=binaryFind(line, 0, 127, 0, 6)
         col :=binaryFind(line, 0, 7, 7, 9)
         seat := row * 8 + col
         if seat > highestSeatNumber { highestSeatNumber = seat }
+        seats[seat] = true
         fmt.Println(line, row, col, seat)
-    } 
-    fmt.Println("Highest seat number", highestSeatNumber)
+    }
+
+    fmt.Println("Highest seat number", highestSeatNumber, "Total seats", 128*8)
+
+    for i := 0; i < 128; i++ {
+        for j := 0; j < 8; j++ {
+            seat := i * 8 + j
+            if _, found := seats[seat]; !found {
+                _, previousFound := seats[seat - 1]
+                _, nextFound := seats[seat + 1]
+                if (previousFound && nextFound) {
+                    fmt.Println("Found missing seat!", seat)
+                }
+            }
+        }
+    }
 }
