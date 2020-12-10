@@ -26,6 +26,24 @@ func countContainersOf(targetColor string, colors map[string]map[string]int, cou
 	}
 }
 
+func countContainedBy(targetColor string, colors map[string]map[string]int, counts map[string]int, level int, multiplier int) int {
+	totalBags := 0
+	v := colors[targetColor]
+	for innerKey, containedBags := range v {
+		if innerKey == targetColor {
+			continue
+		}
+		counts[innerKey] += multiplier * containedBags
+		totalBags += multiplier * containedBags
+
+		// now go down the chain
+		totalBags += countContainedBy(innerKey, colors, counts, level+1, multiplier*containedBags)
+		fmt.Println(strings.Repeat("\t", level), containedBags, innerKey, " =>", totalBags)
+
+	}
+	return totalBags
+}
+
 func parseColors(color string, madeOf string, colors map[string]map[string]int) {
 	if colors[color] == nil {
 		colors[color] = make(map[string]int)
@@ -57,4 +75,9 @@ func main() {
 	counts := map[string]int{}
 	countContainersOf("shiny gold", colors, counts)
 	fmt.Println("Bags that can contain shiny gold = ", counts, len(counts))
+
+	counts2 := map[string]int{}
+	totalBags := countContainedBy("shiny gold", colors, counts2, 0, 1)
+	fmt.Println("Bags contained by shiny gold =", counts2, len(counts2), " Total bags =", totalBags)
+
 }
