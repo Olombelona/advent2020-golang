@@ -23,6 +23,34 @@ func extractNum(num string) int {
 	return v
 }
 
+func matchRunningSum(numbers []int, n int, start int) (bool, int) {
+	acc := 0
+	smallest := numbers[start]
+	largest := smallest		
+	for j := start; acc < n; j++ {
+		x := numbers[j]
+		if x < smallest { smallest = x }
+		if x > largest { largest = x }
+		acc += x
+		if acc == n {
+			fmt.Println("Weakness found at", start, ",", j)
+			return true, smallest + largest
+		}
+	}
+	return false, smallest + largest
+}
+
+
+func findEncryptionWeakness(numbers []int, n int) int {
+	for i := 0; i < len(numbers); i++ {
+		found, weakness := matchRunningSum(numbers, n, i)
+		if found {
+			return weakness
+		}
+	}
+	panic("Weakness not found")
+}
+
 func isValidNumber(numbers []int, at int, preambleSize int) bool {
 	sortedPredecessors := make([]int, preambleSize)
 	insertAt := 0
@@ -89,6 +117,7 @@ func main() {
 	for i := 25; i < len(numbers); i++ {
 		if !isValidNumber(numbers, i, 25) {
 			fmt.Println("First invalid number at pos", i, " val =", numbers[i])
+			fmt.Println("Encryption weakness", findEncryptionWeakness(numbers, numbers[i]))
 			return
 		}
 	}
