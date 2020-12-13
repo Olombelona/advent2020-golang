@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"strconv"
+	"strings"
+	"sync"
 )
-
 
 // Set to true to get debug output
 const verbose = true
+const reportStep = 1000
 
 func check(e error) {
 	if e != nil {
@@ -23,37 +24,55 @@ func extractNum(num string) int {
 	return v
 }
 
-var arrangements int
-
-func countArrangements(adaptersMap map[int]bool, jolt int, arrangements map[int]int, level int) {
+func countArrangements(adaptersMap map[int]bool, jolt int, arrangements map[int]int, level int, id int) {
 
 	if jolt == 0 {
 		arrangements[0]++
-		arrangements[level]++		
-		if arrangements[0] % 10000000 == 0 {
-			fmt.Println("Found arrangement at level", level, arrangements[0])
+		arrangements[level]++
+		a := arrangements[0]
+		if (a % reportStep) == 0 {
+			fmt.Println(id, "\tFound arrangement at level", level, a)
 		}
 		return
 	}
 
-	if jolt - 1 < 0 {
-		fmt.Print("\vNo arrangement at level", level)
+	if jolt-1 < 0 {
+		fmt.Println("No arrangement at level", level)
 		return
 	}
 
 	for dx := 1; dx <= 3; dx++ {
 		x := jolt - dx
 		if adaptersMap[x] {
-			countArrangements(adaptersMap, x, arrangements, level + 1)
+			countArrangements(adaptersMap, x, arrangements, level+1, id)
 		}
 	}
 }
 
+func worker(adaptersMap map[int]bool, jolt int, arrangements map[int]int, level int, lastMap int, wg *sync.WaitGroup) map[int]int {
+	defer wg.Done()
+	id := lastMap*10000 + jolt
+	fmt.Printf("=>>> Starting worker %d\n", id)
+	countArrangements(adaptersMap, jolt, arrangements, level+1, id)
+	fmt.Printf("<<<= Worker %d done\n", id)
+	return arrangements
+}
+
+func mergeArrangements(arrangements map[int]map[int]int) map[int]int {
+	m := make(map[int]int)
+	for _, ar := range arrangements {
+		for k, v := range ar {
+			m[k] += v
+		}
+	}
+	return m
+}
+
 func main() {
-	dat, err := ioutil.ReadFile("adventd10-input.txt")
+	dat, err := ioutil.ReadFile("adventd10-input-short.txt")
 	check(err)
-	lines := strings.Split(string(dat), "\r\n")
-	adapters := make([]int, len(lines) + 2)
+	lines := strings.Split(string(dat), "\n")
+	adapters := make([]int, len(lines)+2)
 
 	// Use a simple insertion sort
 	adapters[0] = 0
@@ -73,9 +92,9 @@ func main() {
 		insertAt++
 	}
 
-	deviceJolt := adapters[len(adapters) - 2] + 3
+	deviceJolt := adapters[len(adapters)-2] + 3
 
-	adapters[len(adapters) - 1] = deviceJolt
+	adapters[len(adapters)-1] = deviceJolt
 
 	adaptersMap := make(map[int]bool)
 
@@ -86,7 +105,7 @@ func main() {
 	joltOthers := 0
 	previous := 0
 	adaptersMap[0] = true
-	for i := 1; i < len(adapters); i++  {
+	for i := 1; i < len(adapters); i++ {
 		current := adapters[i]
 		adaptersMap[current] = true
 		diff := current - previous
@@ -105,12 +124,32 @@ func main() {
 	fmt.Println(adapters)
 	fmt.Println("jolt1", jolt1, "jolt2", jolt2, "jolt3", jolt3, "joltOthers", joltOthers)
 	// Do not forget to count the device jolt3 diff
-	fmt.Println("jolt1 x jolt3", jolt1 * jolt3, "device jolt", deviceJolt)
+	fmt.Println("jolt1 x jolt3", jolt1*jolt3, "device jolt", deviceJolt)
 
 	// All the valid combinations range from 2 to n successive adapters that add up to device jolt
 	// Attempt to build trees that lead to the max device jolt
-	arrangements := make(map[int]int)
-	countArrangements(adaptersMap, deviceJolt - 3, arrangements, 0)
+	arrangements := make(map[int]map[int]int)
+	lastMap := 0
 
-	fmt.Println("Arrangements", arrangements)
+	var wg sync.WaitGroup
+
+	for j1 := 1; j1 <= 3; j1++ {
+		xj1 := deviceJolt - 3 - j1
+		if adaptersMap[xj1] {
+			for j11 := 1; j11 <= 3; j11++ {
+				xj11 := xj1 - j11
+				if adaptersMap[xj11] {
+					wg.Add(1)
+					ar := make(map[int]int)
+					arrangements[lastMap] = ar
+					lastMap++
+					go worker(adaptersMap, xj11, ar, 2, lastMap, &wg)
+				}
+			}
+		}
+	}
+
+	wg.Wait()
+
+	fmt.Println("Arrangements", mergeArrangements(arrangements))
 }
