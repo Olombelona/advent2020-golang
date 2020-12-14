@@ -10,7 +10,7 @@ import (
 
 // Set to true to get debug output
 const verbose = true
-const reportStep = 1000
+const reportStep = 100000000
 
 func check(e error) {
 	if e != nil {
@@ -69,7 +69,7 @@ func mergeArrangements(arrangements map[int]map[int]int) map[int]int {
 }
 
 func main() {
-	dat, err := ioutil.ReadFile("adventd10-input-short.txt")
+	dat, err := ioutil.ReadFile("adventd10-input.txt")
 	check(err)
 	lines := strings.Split(string(dat), "\n")
 	adapters := make([]int, len(lines)+2)
@@ -136,14 +136,29 @@ func main() {
 	for j1 := 1; j1 <= 3; j1++ {
 		xj1 := deviceJolt - 3 - j1
 		if adaptersMap[xj1] {
-			for j11 := 1; j11 <= 3; j11++ {
-				xj11 := xj1 - j11
-				if adaptersMap[xj11] {
-					wg.Add(1)
-					ar := make(map[int]int)
-					arrangements[lastMap] = ar
-					lastMap++
-					go worker(adaptersMap, xj11, ar, 2, lastMap, &wg)
+			for j2 := 1; j2 <= 3; j2++ {
+				xj2 := xj1 - j2
+				if adaptersMap[xj2] {
+					for j3 := 1; j3 <= 3; j3++ {
+						xj3 := xj2 - j3
+						if adaptersMap[xj3] {
+							for ja := 1; ja <= 3; ja++ {
+								xja := xj3 - ja
+								if adaptersMap[xja] {
+									for jb := 1; jb <= 3; jb++ {
+										xjb := xja - jb
+										if adaptersMap[xjb] {
+											wg.Add(1)
+											ar := make(map[int]int)
+											arrangements[lastMap] = ar
+											lastMap++
+											go worker(adaptersMap, xjb, ar, 5, lastMap, &wg)
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
