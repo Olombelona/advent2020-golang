@@ -20,7 +20,25 @@ func check(e error) {
 	}
 }
 
-func adjacentOccupiedCount(seats [][]byte, row int, seat int) int {
+func findFirstOccupied(seats [][]byte, row int, seat int, coord [2]int) bool {
+	maxX := len(seats[row])-1
+	maxY := len(seats)-1
+	x := seat + coord[0]
+	y := row + coord[1]	
+	for (x >= 0 && x <= maxX) && (y >= 0 && y <= maxY) {
+		if (seats[y][x] == occupied) {
+			return true
+		}
+		if (seats[y][x] == empty) {
+			return false
+		}
+		x += coord[0]
+		y += coord[1]	
+	}
+	return false
+}
+
+func adjacentOccupiedCount(seats [][]byte, row int, seat int, tolerant bool) int {
 	coords := [][2]int {
 		{-1, -1},{0, -1}, {1, -1},
 		{-1, 0}, /* {0, 0} */ {1, 0},
@@ -29,17 +47,23 @@ func adjacentOccupiedCount(seats [][]byte, row int, seat int) int {
 	maxX := len(seats[row])-1
 	maxY := len(seats)-1
 	for _, coord := range coords {
-		x := seat + coord[0]
-		y := row + coord[1]
-		if verbose && (row == 8) && (seat == 9) {
-			var v byte = 99
-			if x >= 0 && x <= maxX  && y >= 0 && y <= maxY {
-				v = seats[y][x]
-			}			
-			fmt.Println(y, x, v)
-		}
-		if x >= 0 && x <= maxX  && y >= 0 && y <= maxY && seats[y][x] == occupied {
-			countOccupied++
+		if tolerant {
+			if findFirstOccupied(seats, row, seat, coord) {
+				countOccupied++
+			}
+		} else {
+			x := seat + coord[0]
+			y := row + coord[1]
+			if verbose && (row == 8) && (seat == 9) {
+				var v byte = 99
+				if x >= 0 && x <= maxX  && y >= 0 && y <= maxY {
+					v = seats[y][x]
+				}			
+				fmt.Println(y, x, v)
+			}
+			if x >= 0 && x <= maxX  && y >= 0 && y <= maxY && seats[y][x] == occupied {
+				countOccupied++
+			}
 		}
 	}
 	return countOccupied
@@ -58,21 +82,25 @@ func seatsToString(seats [][]byte) string {
 	return sb.String()
 }
 
-func simulateSeating(seats [][]byte) ([][]byte, int, int) {
+func simulateSeating(seats [][]byte, tolerant bool) ([][]byte, int, int) {
 	newSeats := make([][]byte, len(seats))
 	changes := 0
 	countOccupied := 0
+	emptyThreshold := 4
+	if tolerant {
+		emptyThreshold = 5
+	}
 	for y, row := range seats {
 		newSeats[y] = make([]byte, len(row))
 		for x, seat := range row {
 			if seat == floor {
 				newSeats[y][x] = floor
-			} else if seat == empty && adjacentOccupiedCount(seats, y, x) == 0 {
+			} else if seat == empty && adjacentOccupiedCount(seats, y, x, tolerant) == 0 {
 				newSeats[y][x] = occupied
 				changes++
 				countOccupied++
 			} else if seat == occupied {
-				if adjacentOccupiedCount(seats, y, x) >= 4 {
+				if adjacentOccupiedCount(seats, y, x, tolerant) >= emptyThreshold {
 					newSeats[y][x] = empty
 					changes++
 				} else {
@@ -109,12 +137,13 @@ func main() {
 		}
 	}
 
+	fmt.Println("First pass")
 	continueSimulation := true
 	var newSeats [][]byte = seats
 	countOccupied := 0
 	changes := 0
 	for continueSimulation {
-		newSeats, changes, countOccupied = simulateSeating(newSeats)
+		newSeats, changes, countOccupied = simulateSeating(newSeats, false)
 		continueSimulation = changes > 0
 		if verbose {
 			fmt.Print(seatsToString(newSeats))
@@ -122,4 +151,15 @@ func main() {
 		fmt.Println("changes", changes, "occupied", countOccupied)
 	}	
 	
+	fmt.Println("Second pass - more tolerant")
+	continueSimulation = true
+	newSeats = seats
+	for continueSimulation {
+		newSeats, changes, countOccupied = simulateSeating(newSeats, true)
+		continueSimulation = changes > 0
+		if verbose {
+			fmt.Print(seatsToString(newSeats))
+		}
+		fmt.Println("changes", changes, "occupied", countOccupied)
+	}	
 }
